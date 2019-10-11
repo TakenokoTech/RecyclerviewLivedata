@@ -18,10 +18,10 @@ import tech.takenoko.recyclerviewlivedata.databinding.ItemRecyclerBinding
 
 @SuppressLint("ClickableViewAccessibility")
 class RecyclerAdapter(
-    private val context: Context?,
+    private var context: Context?,
     private var liveList: MutableLiveData<List<MainViewModel.LiveSampleEntity>>,
+    private var owner: LifecycleOwner,
     private val action: MainActivity.MainViewAction,
-    private val owner: LifecycleOwner,
     private val layer: Int
 ): Adapter<ViewHolder>() {
 
@@ -64,13 +64,19 @@ class RecyclerAdapter(
         }
     }
 
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        liveList.observe(owner, Observer { notifyDataSetChanged() })
+
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        liveList.removeObservers(owner)
+        super.onDetachedFromRecyclerView(recyclerView)
+    }
+
     override fun getItemViewType(position: Int): Int = if(liveList.value?.get(position)?.list != null) VIEW_TYPE_RECYCLER else VIEW_TYPE_LAST
     override fun getItemCount(): Int = liveList.value?.size ?: 0
-
-    fun setData(liveList: MutableLiveData<List<MainViewModel.LiveSampleEntity>>) {
-        this.liveList = liveList
-        notifyDataSetChanged()
-    }
 
     class RecyclerAdapterHolder(val binding: ItemRecyclerBinding): ViewHolder(binding.root)
     class LastAdapterHolder(val binding: ItemLastBinding): ViewHolder(binding.root)
@@ -82,8 +88,7 @@ class RecyclerAdapter(
 }
 
 fun RecyclerView.create(liveList: MutableLiveData<List<MainViewModel.LiveSampleEntity>>, action: MainActivity.MainViewAction, owner: LifecycleOwner, layer: Int = 1) {
-    addItemDecoration(DividerItemDecoration(context, LinearLayoutManager(context).orientation))
+    // addItemDecoration(DividerItemDecoration(context, LinearLayoutManager(context).orientation))
     layoutManager = LinearLayoutManager(context)
-    adapter = RecyclerAdapter(context, liveList, action, owner, layer)
-    liveList.observe(owner, Observer { (this.adapter as RecyclerAdapter?)?.setData(liveList) })
+    adapter = RecyclerAdapter(context, liveList, owner, action, layer)
 }
